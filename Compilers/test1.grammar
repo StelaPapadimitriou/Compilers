@@ -1,0 +1,231 @@
+Package minipython;
+
+Helpers
+	digit = ['0' .. '9'];
+	letter = ['a' .. 'z']|['A' .. 'Z']; 
+	cr = 13; 
+	lf = 10;
+	all = [0..127];
+	quote = 34;	
+	apostrophe  = 39;
+	eol = lf | cr | cr lf ;
+	not_eol = [[[all - [cr + lf]]-quote ]- apostrophe]; 
+
+Tokens
+	tab = 9;
+	plus_plus = '++';
+	plus_eq = '+=';
+	plus = '+';
+	minus_eq = '-=';
+	minus_minus = '--';	
+	minus = '-';
+	mult = '*';
+	pow = '**';
+	div_eq = '/=';
+	div = '/';
+	mod = '%';
+	logic_equal = '==';
+	eq = '=';
+	qmark = '?';
+	l_par = '(';
+	r_par = ')';
+	left_bra = '[';
+	right_bra = ']';
+	comma=',';
+	dot = '.';
+	if = 'if';
+	print = 'print';
+	while = 'while';
+	for = 'for';
+	in = 'in';
+	return = 'return';
+	importle = 'import';
+	from = 'from';
+	assert = 'assert';
+	as = 'as';
+	def = 'def';
+	less = '<';
+	great = '>';
+	less_eq = '<=';
+	great_eq = '>=';
+	not_eq = '!=';
+	true = 'true';
+	semi = ':';
+	false = 'false';
+	else = 'else';
+	quote = '"';
+	blank = (' ' | lf | cr);
+	line_comment = '#' not_eol* eol; 
+	number = digit+;
+	id = letter (letter | digit)*;
+	string = quote not_eol* quote | apostrophe not_eol* apostrophe;
+Ignored Tokens
+	blank, line_comment;
+	
+Productions
+	program = commands*  {-> New program([commands])};
+	
+	commands ={func} function {-> New commands.func(function)}|
+				 {stm} statement {-> New commands.stm(statement)};
+				 
+	function = {function_declaration} tab* def id l_par argument? r_par semi statement{-> New function.funcdefine(id, [argument], statement)};
+	
+	argument = {single_arg} id arg_value? more_arguments*{-> New argument.arg(id, [arg_value], [more_arguments])};
+
+	more_arguments = comma id arg_value?{-> New more_arguments(id, [arg_value])};
+	
+	arg_value = {arg_value} eq value {-> New arg_value.ar_value(value)};
+	
+	statement ={if}tab* if  comparison semi statement {-> New statement.if(comparison, statement)}|
+				  {while}tab* while comparison semi statement {-> New statement.while(comparison, statement)}|
+				  {for}tab* for [first_identifier]:id in [following_identifier]:id semi statement {-> New statement.for(first_identifier, following_identifier, statement)}|
+				  {return}tab* return expr_for_plus_minus {-> New statement.return(expr_for_plus_minus.expression)}|
+				  {assign}tab* id eq expr_for_plus_minus  {-> New statement.assign(id, expr_for_plus_minus.expression)}|
+				  {minus_eq}tab* id minus_eq expr_for_plus_minus {-> New statement.minus_eq(id, expr_for_plus_minus.expression)}|
+				  {plus_eq}tab* id plus_eq expr_for_plus_minus {-> New statement.plus_eq(id, expr_for_plus_minus.expression)}|
+				  {div_eq}tab* id div_eq expr_for_plus_minus {-> New statement.div_eq(id, expr_for_plus_minus.expression)}|
+				  {array_assign}tab* id left_bra [first_expression]:expr_for_plus_minus right_bra eq [following_expression]:expr_for_plus_minus  {-> New statement.array_assign(id, first_expression.expression, following_expression.expression)} |
+				  {print}tab* print expr_for_plus_minus comma_expression* {-> New statement.print(expr_for_plus_minus.expression, [comma_expression])}|
+				  {assert} tab* assert expr_for_plus_minus comma_expression? {-> New statement.assert(expr_for_plus_minus.expression , comma_expression)}|
+				  {func_cal}tab* function_call {-> New statement.func_cal(function_call)}|
+				  {importt}tab* full_import {-> New statement.importt(full_import)};
+				  
+	comma_expression = {comma_expression} comma expr_for_plus_minus {-> New comma_expression.comma_expr(expr_for_plus_minus.expression)};
+	
+	comparison = {true} true {-> New comparison.true(true)}|
+					 {false} false {-> New comparison.false(false)} |
+					 {lessc} [lpar]:expr_for_plus_minus less [rpar]:expr_for_plus_minus {-> New comparison.lessc(lpar.expression,rpar.expression)}|
+					 {greatc}[lpar]:expr_for_plus_minus great [rpar]:expr_for_plus_minus {-> New comparison.greatc(lpar.expression,rpar.expression)}|
+					 {lessc_equal} [lpar]:expr_for_plus_minus less_eq [rpar]:expr_for_plus_minus {-> New comparison.lessc_equal(lpar.expression,rpar.expression)}|
+					 {greatc_equal}[lpar]:expr_for_plus_minus great_eq [rpar]:expr_for_plus_minus {-> New comparison.greatc_equal(lpar.expression,rpar.expression)}|
+					 {not_eq}[lpar]:expr_for_plus_minus not_eq [rpar]:expr_for_plus_minus {-> New comparison.not_eq(lpar.expression,rpar.expression)}|
+					 {logic_equal}[l_par]:expr_for_plus_minus logic_equal [r_par]:expr_for_plus_minus {-> New comparison.logic_equal(l_par.expression,r_par.expression)};
+	
+	expr_for_plus_minus {->expression} = {general} expr_for_mult_div {-> expr_for_mult_div.expression}|
+							{multi} expr_for_plus_minus plus expr_for_mult_div {-> New expression.add(expr_for_plus_minus.expression, expr_for_mult_div.expression)}|
+							{div} expr_for_plus_minus minus expr_for_mult_div {-> New expression.sub(expr_for_plus_minus.expression, expr_for_mult_div.expression)};
+	
+	expr_for_mult_div {->expression} = expr_for_power {-> expr_for_power.expression}|
+							{multi} expr_for_mult_div mult expr_for_power {-> New expression.multi(expr_for_mult_div.expression, expr_for_power.expression)}|
+							{mod} expr_for_mult_div mod expr_for_power {-> New expression.mod(expr_for_mult_div.expression, expr_for_power.expression)}|
+							{div} expr_for_mult_div div expr_for_power {-> New expression.div(expr_for_mult_div.expression, expr_for_power.expression)};
+	
+	expr_for_power {->expression}= {power} expression {-> expression.expression}|
+					 {pow} expr_for_power pow expression {-> New expression.pow(expr_for_power.expression, expression)};
+	
+	
+	expression = {function_call} function_call {-> New expression.function_call(function_call)}|
+					{id} id {-> New expression.id(id)}|
+					{arrayid} id left_bra expr_for_plus_minus  right_bra {-> New expression.arrayid(id, expr_for_plus_minus.expression)}|
+					{val} value {-> New expression.val(value)}|
+					{parenthesi} l_par expr_for_plus_minus r_par {-> expr_for_plus_minus.expression}|
+					{value_array} left_bra value comma_value* right_bra {-> New expression.value_array(value, [comma_value])};
+				
+	full_import = {import} import {-> New full_import.import(import)}|
+					{import_from} import_from {-> New full_import.import_from(import_from)};
+					
+	import_from = {import_from} from module importle id as_id? {->New import_from.import_from(module,id,as_id)}|
+					{import_from_withcommas} import_from comma id as_id? {-> New import_from.import_from_withcommas(import_from,id,as_id)};
+	
+	import = {import}importle module as_id? {-> New import.import(module,as_id)}|
+				{import_withcomma} import comma module as_id? {->New import.import_withcomma(import,module,as_id)};
+				
+	as_id = {import_as_id} as id {-> New as_id.import_as_id(id)};
+	
+	module = {module}id_dot* id {-> New module.module([id_dot],id)};
+	
+	function_call = {func_call} id l_par arglist? r_par  {-> New function_call.func_call(id, [arglist])};
+	
+	arglist = expr_for_plus_minus more_list_arguments*{-> New arglist(expr_for_plus_minus.expression, [more_list_arguments])};
+		
+	more_list_arguments = comma expr_for_plus_minus{-> New more_list_arguments(expr_for_plus_minus.expression)};
+	
+	value = {id_dot_function} id dot function_call {-> New value.id_dot_function(id,function_call)} |
+				{num} number|
+				{string} string;
+		
+	comma_value = {comval} comma value {-> New comma_value.comval(value)};
+	
+	id_dot = {identifier_plus_dot} id dot {-> New id_dot.identifier_plus_dot(id)};
+
+
+Abstract Syntax Tree
+
+	program = commands*;
+	
+	commands ={func} function|
+				 {stm} statement;
+				 
+	function = {funcdefine} id argument* statement;
+	
+	argument = {arg} id arg_value* more_arguments*;
+	
+	arg_value = {ar_value} value;
+	
+	more_arguments =  id arg_value*;
+	
+	statement ={if}comparison statement |
+				  {while}comparison statement|
+				  {for}[first_identifier]:id [following_identifier]:id statement|
+				  {return}expression |
+				  {assign}id expression |
+				  {minus_eq}id expression |
+				  {plus_eq}id expression |
+				  {div_eq}id expression |
+				  {array_assign}id [first_expression]:expression [following_expression]:expression |
+				  {print}expression comma_expression* |
+				  {assert} expression comma_expression? |
+				  {func_cal} function_call |
+				  {importt} full_import;
+				  
+	comma_expression = {comma_expr} expression;
+	
+	comparison = {true} true|
+					 {false} false|
+					 {lessc} [lpar]:expression [rpar]:expression|
+					 {greatc}[lpar]:expression [rpar]:expression |
+					 {lessc_equal} [lpar]:expression [rpar]:expression|
+					 {greatc_equal}[lpar]:expression [rpar]:expression |
+					 {not_eq}[lpar]:expression [rpar]:expression |
+					 {logic_equal}[l_par]:expression [r_par]:expression;
+					 
+	expression ={function_call} function_call |
+					{id} id |
+					{arrayid} id expression  |
+					{val} value |
+					{parenthesi} expression |
+					{value_array} value comma_value* |
+					{add} [fisrt]:expression [next]:expression |
+					{div} [fisrt]:expression [next]:expression |
+					{multi} [fisrt]:expression [next]:expression  |
+					{mod} [fisrt]:expression [next]:expression  |
+					{sub} [fisrt]:expression [next]:expression |
+					{pow} [fisrt]:expression [next]:expression ;
+					
+	full_import = {import} import |
+					{import_from} import_from;
+					
+	import_from = {import_from} module id as_id |
+					{import_from_withcommas} import_from id as_id;
+	
+	import = {import} module as_id |
+				{import_withcomma} import module as_id;
+				
+	as_id = {import_as_id} id;
+	
+	module = {module}id_dot* id;
+	
+	function_call = {func_call} id arglist*;
+	
+	arglist = expression more_list_arguments*;
+		
+
+	more_list_arguments = expression;
+						
+	value = {id_dot_function} id function_call |
+				{num} number|
+				{string} string;
+		
+	comma_value = {comval} value;
+	
+	id_dot = {identifier_plus_dot} id;

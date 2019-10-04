@@ -1,0 +1,149 @@
+Package minipython;
+
+Helpers
+	digit = ['0' .. '9'];
+	letter = ['a' .. 'z']|['A' .. 'Z']; 
+	cr = 13; 
+	lf = 10;
+	all = [0..127];
+	quote = 34;	
+	apostrophe  = 39;
+	eol = lf | cr | cr lf ;
+	not_eol = [[[all - [cr + lf]]-quote ]- apostrophe]; 
+
+Tokens
+	tab = 9;
+	plus_plus = '++';
+	plus_eq = '+=';
+	plus = '+';
+	minus_eq = '-=';
+	minus_minus = '--';	
+	minus = '-';
+	mult = '*';
+	pow = '**';
+	div_eq = '/=';
+	div = '/';
+	mod = '%';
+	logic_equal = '==';
+	eq = '=';
+	qmark = '?';
+	l_par = '(';
+	r_par = ')';
+	left_bra = '[';
+	right_bra = ']';
+	comma=',';
+	dot = '.';
+	if = 'if';
+	print = 'print';
+	while = 'while';
+	for = 'for';
+	in = 'in';
+	return = 'return';
+	importle = 'import';
+	from = 'from';
+	assert = 'assert';
+	as = 'as';
+	def = 'def';
+	less = '<';
+	great = '>';
+	less_eq = '<=';
+	great_eq = '>=';
+	not_eq = '!=';
+	true = 'true';
+	semi = ':';
+	false = 'false';
+	else = 'else';
+	quote = '"';
+	blank = (' ' | lf | cr);
+	line_comment = '#' not_eol* eol; 
+	number = digit+;
+	id = letter (letter | digit)*;
+	string = quote not_eol* quote | apostrophe not_eol* apostrophe;
+Ignored Tokens
+	blank, line_comment;
+	
+Productions
+	program = commands*;
+	
+	commands ={func} function|
+				 {stm} statement;
+				 
+	function = {function_declaration} tab* def id l_par argument? r_par semi statement;
+	
+	argument = {single_arg} id arg_value? |
+				{many_args} argument comma id arg_value?;
+
+	arg_value = {arg_value} eq value;
+	
+	statement ={if}tab* if  comparison semi statement |
+				  {while}tab* while comparison semi statement|
+				  {for}tab* for [first_identifier]:id in [following_identifier]:id semi statement|
+				  {return}tab* return expr_for_plus_minus |
+				  {assign}tab* id eq expr_for_plus_minus |
+				  {minus_eq}tab* id minus_eq expr_for_plus_minus |
+				  {plus_eq}tab* id plus_eq expr_for_plus_minus |
+				  {div_eq}tab* id div_eq expr_for_plus_minus |
+				  {array_assign}tab* id left_bra [first_expression]:expr_for_plus_minus right_bra eq [following_expression]:expr_for_plus_minus |
+				  {print}tab* print expr_for_plus_minus comma_expression* |
+				  {assert} tab* assert expr_for_plus_minus comma_expression? |
+				  {func_cal}tab* function_call |
+				  {importt}tab* full_import;
+				  
+	comma_expression = {comma_expression} comma expr_for_plus_minus;
+	
+	comparison = {true} true|
+					 {false} false|
+					 {lessc} [lpar]:expr_for_plus_minus less [rpar]:expr_for_plus_minus|
+					 {greatc}[lpar]:expr_for_plus_minus great [rpar]:expr_for_plus_minus |
+					 {lessc_equal} [lpar]:expr_for_plus_minus less_eq [rpar]:expr_for_plus_minus|
+					 {greatc_equal}[lpar]:expr_for_plus_minus great_eq [rpar]:expr_for_plus_minus |
+					 {not_eq}[lpar]:expr_for_plus_minus not_eq [rpar]:expr_for_plus_minus |
+					 {logic_equal}[l_par]:expr_for_plus_minus logic_equal [r_par]:expr_for_plus_minus;
+	
+	expr_for_plus_minus = {general} expr_for_mult_div|
+							{multi} expr_for_plus_minus plus expr_for_mult_div |
+							{div} expr_for_plus_minus minus expr_for_mult_div;
+	
+	expr_for_mult_div = expr_for_power|
+							{multi} expr_for_mult_div mult expr_for_power |
+							{mod} expr_for_mult_div mod expr_for_power |
+							{div} expr_for_mult_div div expr_for_power;
+	
+	expr_for_power = {power} expression |
+					 {pow} expr_for_power pow expression;
+	
+	
+	expression = function_call |
+					{id} id |
+					{arrayid} id left_bra expr_for_plus_minus  right_bra |
+					{val} value |
+					{parenthesi} l_par expr_for_plus_minus r_par |
+					{value_array} left_bra value comma_value* right_bra;
+				
+	full_import = {import} import |
+					{import_from} import_from;
+					
+	import_from = {import_from} from module importle id as_id? |
+					{import_from_withcommas} import_from comma id as_id?;
+	
+	import = {import}importle module as_id? |
+				{import_withcomma} import comma module as_id?;
+				
+	as_id = {import_as_id} as id;
+	
+	module = {module}id_dot* id;
+	
+	function_call = {func_call} id l_par arglist? r_par;
+	
+	arglist = {arglist} expr_for_plus_minus|
+						arglist comma expr_for_plus_minus;
+						
+						
+	value = {id_dot_function} id dot function_call |
+				{num} number|
+				{string} string;
+		
+	comma_value = {comval} comma value;
+	
+	id_dot = {identifier_plus_dot} id dot;
+
